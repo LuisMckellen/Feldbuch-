@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Feldbuch</string>
+    <string name="nav_tree">Tree</string>
+    <string name="nav_chat">Chat</string>
+    <string name="nav_draft">Note</string>
+    <string name="nav_settings">Setup</string>
+    <string name="banner_draft_prompt">%1$d messages waiting — draft the note?</string>
+    <string name="banner_draft_action">Draft Note</string>
+    <string name="badge_waiting_count">%1$d waiting</string>
+    <string name="filter_paths_placeholder">Filter filenames or paths…</string>
+    <string name="tray_title">Context Tray</string>
+    <string name="copy_note">Copy</string>
+    <string name="export_json">Export JSON</string>
+</resources>

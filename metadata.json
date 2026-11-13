@@ -1,0 +1,6 @@
+{
+  "name": "Feldbuch",
+  "description": "Offline-first field notebook for browsing a GitHub repository tree, filtering by filename, curating AI context via raw file fetches, and drafting structured session notes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
