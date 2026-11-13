@@ -19,6 +19,8 @@ data class ChatMessageEntity(
   val timestampMs: Long,
   val contextPaths: String = "",
   val includedInNote: Boolean = false,
+  val errorReason: String? = null,
+  val errorDetail: String? = null,
 )
 
 @Entity(tableName = "session_notes")
@@ -30,4 +32,40 @@ data class SessionNoteEntity(
   val endTimestampMs: Long,
   val createdAtMs: Long,
   val isCurrentDraft: Boolean = true,
+)
+
+enum class OutboxKind(val wireValue: String, val label: String) {
+  NOTE("note", "Note"),
+  IDEA("idea", "Idea"),
+  QUESTION("question", "Question");
+
+  companion object {
+    fun fromWire(value: String): OutboxKind =
+      entries.firstOrNull { it.wireValue == value } ?: NOTE
+  }
+}
+
+enum class OutboxState(val wireValue: String, val label: String) {
+  QUEUED("queued", "Queued"),
+  SENDING("sending", "Sending"),
+  SENT("sent", "Sent"),
+  FAILED("failed", "Failed");
+
+  companion object {
+    fun fromWire(value: String): OutboxState =
+      entries.firstOrNull { it.wireValue == value } ?: QUEUED
+  }
+}
+
+@Entity(tableName = "outbox")
+data class OutboxEntity(
+  @PrimaryKey val id: String,
+  val kind: String, // "note" | "idea" | "question"
+  val body: String,
+  val createdAt: Long,
+  val state: String, // "queued" | "sending" | "sent" | "failed"
+  val attempts: Int = 0,
+  val lastError: String? = null,
+  val answerText: String? = null,
+  val citationsJson: String? = null,
 )

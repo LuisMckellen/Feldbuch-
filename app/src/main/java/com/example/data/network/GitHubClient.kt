@@ -1,6 +1,5 @@
 package com.example.data.network
 
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -14,13 +13,11 @@ data class GitHubTreeEntry(
   val sizeBytes: Long,
 )
 
-class GitHubClient {
-  private val client: OkHttpClient =
-    OkHttpClient.Builder()
-      .connectTimeout(15, TimeUnit.SECONDS)
-      .readTimeout(30, TimeUnit.SECONDS)
-      .callTimeout(45, TimeUnit.SECONDS)
-      .build()
+class GitHubClient(
+  private val baseUrl: String = DEFAULT_BASE_URL,
+  private val enforceHttps: Boolean = true,
+) {
+  private val client: OkHttpClient = FeldbuchHttpClients.createGitHubClient(enforceHttps = enforceHttps)
 
   suspend fun fetchTree(
     owner: String,
@@ -40,9 +37,14 @@ class GitHubClient {
       }
 
       try {
+        val parsedBase =
+          if (enforceHttps) {
+            FeldbuchHttpClients.requireHttpsUrl(baseUrl, OkHttpService.GITHUB)
+          } else {
+            baseUrl.toHttpUrl()
+          }
         val url =
-          "https://api.github.com"
-            .toHttpUrl()
+          parsedBase
             .newBuilder()
             .addPathSegment("repos")
             .addPathSegment(cleanOwner)
@@ -111,9 +113,14 @@ class GitHubClient {
       }
 
       try {
+        val parsedBase =
+          if (enforceHttps) {
+            FeldbuchHttpClients.requireHttpsUrl(baseUrl, OkHttpService.GITHUB)
+          } else {
+            baseUrl.toHttpUrl()
+          }
         val urlBuilder =
-          "https://api.github.com"
-            .toHttpUrl()
+          parsedBase
             .newBuilder()
             .addPathSegment("repos")
             .addPathSegment(cleanOwner)
@@ -149,4 +156,8 @@ class GitHubClient {
         Result.failure(e)
       }
     }
+
+  companion object {
+    const val DEFAULT_BASE_URL = "https://api.github.com"
+  }
 }

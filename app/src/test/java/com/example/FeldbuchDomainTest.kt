@@ -7,7 +7,7 @@ import com.example.data.local.TreeFileEntity
 import com.example.domain.ExportSerializer
 import com.example.domain.NoteDraftPrompt
 import com.example.domain.TreeBrowserHelper
-import java.time.LocalTime
+import java.util.Calendar
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -61,19 +61,32 @@ class FeldbuchDomainTest {
 
   @Test
   fun `banner and quiet badge logic obey hub status and 15-00 clock threshold`() {
+    val before1500 =
+      Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 14)
+        set(Calendar.MINUTE, 59)
+      }
+    val at1500 =
+      Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 15)
+        set(Calendar.MINUTE, 0)
+      }
+    assertFalse(TreeBrowserHelper.isCurrentClockPast1500(before1500))
+    assertTrue(TreeBrowserHelper.isCurrentClockPast1500(at1500))
+
     // Hub closed, before 15:00, messages waiting -> quiet badge only, no banner
     assertFalse(
       TreeBrowserHelper.shouldShowHomeBanner(
         unsentCount = 3,
         hubReachable = false,
-        localTime = LocalTime.of(14, 59),
+        isPast1500 = TreeBrowserHelper.isCurrentClockPast1500(before1500),
       )
     )
     assertTrue(
       TreeBrowserHelper.shouldShowQuietBadge(
         unsentCount = 3,
         hubReachable = false,
-        localTime = LocalTime.of(14, 59),
+        isPast1500 = TreeBrowserHelper.isCurrentClockPast1500(before1500),
       )
     )
 
@@ -82,14 +95,14 @@ class FeldbuchDomainTest {
       TreeBrowserHelper.shouldShowHomeBanner(
         unsentCount = 3,
         hubReachable = false,
-        localTime = LocalTime.of(15, 0),
+        isPast1500 = TreeBrowserHelper.isCurrentClockPast1500(at1500),
       )
     )
     assertFalse(
       TreeBrowserHelper.shouldShowQuietBadge(
         unsentCount = 3,
         hubReachable = false,
-        localTime = LocalTime.of(15, 0),
+        isPast1500 = TreeBrowserHelper.isCurrentClockPast1500(at1500),
       )
     )
 
@@ -98,7 +111,7 @@ class FeldbuchDomainTest {
       TreeBrowserHelper.shouldShowHomeBanner(
         unsentCount = 1,
         hubReachable = true,
-        localTime = LocalTime.of(9, 15),
+        isPast1500 = false,
       )
     )
 
@@ -107,14 +120,14 @@ class FeldbuchDomainTest {
       TreeBrowserHelper.shouldShowHomeBanner(
         unsentCount = 0,
         hubReachable = true,
-        localTime = LocalTime.of(16, 0),
+        isPast1500 = true,
       )
     )
     assertFalse(
       TreeBrowserHelper.shouldShowQuietBadge(
         unsentCount = 0,
         hubReachable = false,
-        localTime = LocalTime.of(10, 0),
+        isPast1500 = false,
       )
     )
   }

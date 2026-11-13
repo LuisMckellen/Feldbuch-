@@ -45,11 +45,17 @@ interface FeldbuchDao {
   @Query("SELECT * FROM chat_messages ORDER BY timestampMs ASC, id ASC")
   fun observeAllMessages(): Flow<List<ChatMessageEntity>>
 
-  @Query("SELECT * FROM chat_messages WHERE includedInNote = 0 ORDER BY timestampMs ASC, id ASC")
+  @Query("SELECT * FROM chat_messages WHERE includedInNote = 0 AND errorReason IS NULL ORDER BY timestampMs ASC, id ASC")
   fun observeUnsentMessages(): Flow<List<ChatMessageEntity>>
 
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   suspend fun insertMessage(message: ChatMessageEntity): Long
+
+  @Query("UPDATE chat_messages SET errorReason = :reason, errorDetail = :detail WHERE id = :id")
+  suspend fun updateMessageError(id: Long, reason: String?, detail: String?)
+
+  @Query("UPDATE chat_messages SET contextPaths = :contextPaths, errorReason = NULL, errorDetail = NULL WHERE id = :id")
+  suspend fun clearMessageErrorAndUpdateContext(id: Long, contextPaths: String)
 
   @Query("UPDATE chat_messages SET includedInNote = 1 WHERE id IN (:ids)")
   suspend fun markMessagesIncluded(ids: List<Long>)
@@ -74,4 +80,47 @@ interface FeldbuchDao {
 
   @Query("DELETE FROM session_notes")
   suspend fun clearAllSessionNotes()
+
+  @Query("SELECT * FROM outbox ORDER BY createdAt DESC")
+  fun observeOutboxItems(): Flow<List<OutboxEntity>>
+
+  @Query("SELECT * FROM outbox ORDER BY createdAt DESC")
+  suspend fun getAllOutboxItemsOnce(): List<OutboxEntity>
+
+  @Query("SELECT * FROM outbox WHERE state = 'queued' ORDER BY createdAt ASC")
+  suspend fun getQueuedOutboxItemsOnce(): List<OutboxEntity>
+
+  @Query("SELECT * FROM outbox WHERE id = :id LIMIT 1")
+  suspend fun getOutboxItemById(id: String): OutboxEntity?
+
+  @Insert(onConflict = OnConflictStrategy.IGNORE)
+  suspend fun insertOutboxItem(item: OutboxEntity)
+
+  @Query("UPDATE outbox SET state = 'sending' WHERE id = :id AND state = 'queued'")
+  suspend fun claimQueuedItemForSending(id: String): Int
+
+  @Query("UPDATE outbox SET state = 'sent', lastError = NULL WHERE id = :id")
+  suspend fun markOutboxSent(id: String)
+
+  @Query(
+    "UPDATE outbox SET state = 'sent', lastError = NULL, answerText = :answerText, citationsJson = :citationsJson WHERE id = :id"
+  )
+  suspend fun markOutboxSentWithAnswer(id: String, answerText: String, citationsJson: String?)
+
+  @Query("UPDATE outbox SET state = :nextState, attempts = :attempts, lastError = :lastError WHERE id = :id")
+  suspend fun markOutboxAttemptFailed(
+    id: String,
+    nextState: String,
+    attempts: Int,
+    lastError: String?,
+  )
+
+  @Query("UPDATE outbox SET state = 'queued', attempts = 0, lastError = NULL WHERE id = :id AND state = 'failed'")
+  suspend fun resetFailedItemToQueued(id: String): Int
+
+  @Query("UPDATE outbox SET state = 'queued' WHERE state = 'sending'")
+  suspend fun resetStuckSendingToQueued(): Int
+
+  @Query("DELETE FROM outbox WHERE state = 'sent'")
+  suspend fun deleteSentOutboxItems()
 }

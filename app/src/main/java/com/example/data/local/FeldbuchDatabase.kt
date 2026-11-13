@@ -6,8 +6,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-  entities = [TreeFileEntity::class, ChatMessageEntity::class, SessionNoteEntity::class],
-  version = 2,
+  entities =
+    [
+      TreeFileEntity::class,
+      ChatMessageEntity::class,
+      SessionNoteEntity::class,
+      OutboxEntity::class,
+    ],
+  version = 5,
   exportSchema = false,
 )
 abstract class FeldbuchDatabase : RoomDatabase() {

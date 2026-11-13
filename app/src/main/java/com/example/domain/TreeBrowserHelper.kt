@@ -1,7 +1,8 @@
 package com.example.domain
 
 import com.example.data.local.TreeFileEntity
-import java.time.LocalTime
+import java.util.Calendar
+import java.util.Locale
 
 data class FolderGroup(
   val folderPath: String, // "(root)" for top-level files, otherwise "dir/sub/"
@@ -20,9 +21,30 @@ object TreeBrowserHelper {
     files: List<TreeFileEntity>,
     filterQuery: String,
   ): List<TreeFileEntity> {
-    val needle = filterQuery.trim().lowercase()
+    val needle = filterQuery.trim().lowercase(Locale.ROOT)
     if (needle.isEmpty()) return files
-    return files.filter { it.path.lowercase().contains(needle) }
+    return files.filter { it.path.lowercase(Locale.ROOT).contains(needle) }
+  }
+
+  fun filterFilesByName(
+    files: List<TreeFileEntity>,
+    query: String,
+    matchFullPath: Boolean = false,
+  ): List<TreeFileEntity> {
+    val trimmed = query.trim()
+    if (trimmed.isEmpty()) return files
+    val tokens = trimmed.lowercase(Locale.ROOT).split(Regex("\\s+")).filter { it.isNotEmpty() }
+    if (tokens.isEmpty()) return files
+    val searchAgainstPath = matchFullPath || trimmed.contains('/')
+    return files.filter { file ->
+      val target =
+        if (searchAgainstPath) {
+          file.path.lowercase(Locale.ROOT)
+        } else {
+          file.path.substringAfterLast('/').lowercase(Locale.ROOT)
+        }
+      tokens.all { token -> target.contains(token) }
+    }
   }
 
   fun groupByFolder(files: List<TreeFileEntity>): List<FolderGroup> {
@@ -48,22 +70,24 @@ object TreeBrowserHelper {
     )
   }
 
+  fun isCurrentClockPast1500(calendar: Calendar = Calendar.getInstance()): Boolean =
+    calendar.get(Calendar.HOUR_OF_DAY) >= 15
+
   fun shouldShowHomeBanner(
     unsentCount: Int,
     hubReachable: Boolean,
-    localTime: LocalTime,
+    isPast1500: Boolean,
   ): Boolean {
     if (unsentCount <= 0) return false
-    val isPast1500 = !localTime.isBefore(LocalTime.of(15, 0))
     return hubReachable || isPast1500
   }
 
   fun shouldShowQuietBadge(
     unsentCount: Int,
     hubReachable: Boolean,
-    localTime: LocalTime,
+    isPast1500: Boolean,
   ): Boolean {
     if (unsentCount <= 0) return false
-    return !shouldShowHomeBanner(unsentCount, hubReachable, localTime)
+    return !shouldShowHomeBanner(unsentCount, hubReachable, isPast1500)
   }
 }
